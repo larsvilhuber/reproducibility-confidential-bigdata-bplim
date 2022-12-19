@@ -3,10 +3,10 @@
 
 cff-version: 1.2.0
 title: >-
-  Creating reproducible packages when data are confidential
+  Reproducibility when data are confidential or big
 message: >-
-  Presented at the 2022 FSRDC Conference. The opinions 
-  expressed in this talk are solely the authors, and do not 
+  Presented at the 2022 Banco de Portugal Workshop. The opinions 
+  expressed in this talk are solely the author's, and do not 
   represent the views of the U.S. Census Bureau, the American 
   Economic Association, or any of the funding agencies.
 type: presentation
@@ -17,15 +17,8 @@ authors:
     affiliation: Cornell University
     orcid: 'https://orcid.org/0000-0001-5733-8932'
 repository-code: >-
-  https://github.com/larsvilhuber/reproducibility-confidential-fsrdc/
+  https://github.com/larsvilhuber/reproducibility-confidential-bigdata-bplim
 abstract: >-
-  The American Economic Association's Data Editor has
-  reviewed more than 1,000 empirical articles since
-  July 2019, and worked with authors to improve the
-  reproducibility of their research compendia
-  (replication packages). Some lessons emerge from
-  this work. In this presentation, I will focus on
-  lessons for scholars using confidential data, in 
-  particular in the FSRDC.
+  To come.
 license: CC-BY-4.0
-date-released: '2022-09-23'
+date-released: '2022-12-19'
