@@ -1,5 +1,5 @@
 ---
-title: "Creating reproducible packages when data are confidential"
+title: "Reproducibility when data are confidential or big"
 author: 
   - "Lars Vilhuber"
 date: "`r Sys.Date()`"
@@ -10,147 +10,57 @@ output:
     widescreen: true
 ---
 
-# Credits
+# Credits and Disclaimer
 
-Based on an earlier presentation and tutorial at the [Cornell Day of Data 2021](https://labordynamicsinstitute.github.io/day-of-data-2021/) with David Wasser and a presentation at [MONT^2](https://www.mont2-econlab.com/).
+Based on earlier presentations: [Cornell Day of Data 2021](https://labordynamicsinstitute.github.io/day-of-data-2021/) w/ David Wasser,  [MONT^2](https://www.mont2-econlab.com/), [FSRDC conference](https://https://larsvilhuber.github.io/reproducibility-confidential-fsrdc).
+
+*The opinions expressed in this talk are solely the author, and do not represent the views of the U.S. Census Bureau, the American Economic Association,  any of the funding agencies, or any previous co-authors...*
 
 ## Overview
 
 | | | 
 |----|-----|
-| [Part 1:](#8)  |  When to start |
-| [Part 2:](#15) | - Ideal directory and data structure <br/>- Adapting to confidential / big data |
-| [Part 3:](#25) | - Ideal programming practices <br/> - Secure coding techniques|
-| [Part 4:](#48) | - Documenting what you did <br/> - When to document |
+| [Part 1:](#8)  |  Why? |
+| [Part 2:](#15) |  Secure coding techniques|
+| [Part 3:](#27) |  Efficient coding techniques |
+| [Part 4:](#48) |  Documenting what you did  |
+
+# Why?
+
+## Why worry about reproducibility?
+
+... when nobody can see your data?
 
 
-# But first...
+## Key considerations?
 
-## Please Version your code and your results
+- Because somebody else *will* access your data, or similar data.
+- Because it will actually save you time
+- Because if you want to publish, you may need to show reproducibility
 
-- Even in restricted environment, use versioning
-- If available, use `git`
-  - If not available, request `git`
-  - If not, use regular backups (scripted, automated)
+## Journals may access the data
 
+```{r, out.width = "90%", out.height = "85%", fig.cap= "AEA workflow", echo=FALSE}
 
-
-
-
-
-# Computational Empathy
-
-## Consider how the next person will (be able to) compute
-
-- You don't know who that is
-- You don’t know what they don’t know
-- Will not have any of your add-on packages/ libraries/ etc. pre-installed
-- Don’t force them (yourself!) to do tedious things
-
-It might be "Future You!"
-
-
-
-
-
-
-# Part 1 | When to start
-
-## It is never too early
-
-### Start thinking about the replication package when you start a project
-
-- Setting up the structure at project setup
-  - Directory structure
-  - Constraints on processing and content (confidentiality)
-- Starting a documentation shell, to fill in with details
-- Capturing information as you progress through the project  
-  - `git` branches!
-  - Intermediate output
-
-## It is never too late
-
-### But it might be more work....
-
-- Document as you progress
-- Document when there are personnel changes
-  - Debrief an RA who is leaving
-  - Debrief a co-author who might be absent for a while
-
-## Consider automation
-
-### Repeatedly running through the entire sequence ensures later robustness
-
-- Presumes a single control file (`main.do`, `run.sh`)
-- Presumes ability to version results!
-- Leverage (Census-specific) job queues
-- Use free resources
-  - Job queues with low priority
-  - Human downtimes (leaving for a holiday, going to a conference)
-
-
-
-
-
-## Consider automation
-
-### Introduce break points
-
-- Do not reprocess when no changes to data or code happen
-- Always reprocess if data or code change 
-- Decision might be 
-  - Manual (flags)
-  - Automated (`make`, checksums, etc.)
-  
-## Consider automation
-
-### Introduce break points: manual
-
-```{stata, eval=FALSE}
-// Header  of main.do
-global step1 0
-global step2 1
-global step3 1
-
-if $step1 == 1  do "$code/01_dataclean.do"
-if $step2 == 1  do "$code/02_merge_stuff.do"
-if $step3 == 1  do "$code/03_figures.do"
-
+knitr::include_graphics("images/aea-process-1.png")
 ```
 
-
-## Consider automation
-
-### Introduce break points: automated
+## Reproducibility = own time
 
 
-```{stata, eval=FALSE}
-// Header of main.do
-global step1 1
-global step2 1
+```{r, out.width = "90%", out.height = "85%", fig.cap= "FB problem", echo=FALSE}
 
-// verify if file has changed
-global checksum1 386698503
-qui checksum "$resultfile1"
-if `r(checksum)' == $checksum1 global step1 0 
-
-if $step1 == 1  do "$code/01_dataclean.do"
-if $step2 == 1  do "$code/02_merge_stuff.do"
-if $step3 == 1  do "$code/03_figures.do"
+knitr::include_graphics("images/twitter-facebook-data2.png")
 ```
 
+## Journals require it
+
+- In a typical year, we (AEA) will **obtain access (or request access) to 20%** of data that is confidential
+- Some journals will require that it be provided (privately) and won't publish otherwise
 
 
 
-
-
-
-
-
-
-
-
-# Part 2 | Ideal structure
+# Part 1 | File structure
 
 ## Generic project setup
 
@@ -185,12 +95,12 @@ if $step3 == 1  do "$code/03_figures.do"
 </td><td>
 
 ```
-/datos/
+/dados/
     /brutos
-    /limpiados
-    /finales
+    /limpos
+    /finais
 /codigo
-/articulo
+/artigo
 ```
 </td></tr></table>
 
@@ -233,27 +143,69 @@ It doesn't really matter, as long as it is logical.
 This may no longer work:
 
 ```
-/datos/
+/dados/
     /brutos
-    /limpiados
-    /finales
+    /limpos
+    /finais
 /codigo
-/articulo
+/artigo
 ```
 </td>
 <td>
 This may be what it looks like:
 
 ```
-/proyecto/
-     /datos/
+/projeto/
+     /dados/
         /brutos
-        /limpiados
-        /finales
+        /limpos
+        /finais
      /codigo
-     /articulo
-/secretos            (read-only)
-     /impuestos      (read-only)
+     /artigo
+/secredos            (read-only)
+     /impostos      (read-only)
+     /salarios       (read-only)
+```
+
+</td></tr></table>
+
+## Project setup examples
+
+
+<table width="100%">
+<tr>
+<td width="50%">
+
+This may be what it looks like:
+
+```
+/projeto/
+     /dados/
+        /brutos
+        /limpos
+        /finais
+     /codigo
+     /artigo
+/secredos            (read-only)
+     /impostos       (read-only)
+     /salarios       (read-only)
+```
+</td>
+<td>
+Or maybe even:
+
+```
+/projeto/
+     /dados/
+        /brutos
+        /limpos
+        /finais
+     /codigo
+     /artigo
+/secredos            (read-only)
+     /impostos/
+              /v1/   (read-only)
+              /v2/   (read-only)
      /salarios       (read-only)
 ```
 
@@ -262,62 +214,145 @@ This may be what it looks like:
 How do we handle directories outside of the project space?
 
 
+# Part 2 | Programming practices
+
+## No manual manipulation 
 
 
+**DO NOT DO THIS**
 
+- “Change the parameter to 0.2, then run the code again”
 
-# Part 3: Programming practices
+**DO DO THIS**
 
-## Streamlining
-
-- Controller  script (`main.do`, `run.sh`) preferred
-  - Least amount of manual effort
-- No manual copying of results 
-  - dynamic documents!
-  - Write out/save tables and figures using packages
-- Clear instructions
-- No manual install of packages
-  - Use a script to create all directories, install all necessary packages/requirements/etc.
-
-## Reproducibility
-
-- No manual manipulation 
-  - “Change the parameter to 0.2, then run the code again”
+- Use code:
   - Use *functions*, ado files, programs, macros, subroutines
   - Use *loops*, parameters, *parameter files* to call those subroutines
   - Use *placeholders* (globals, macros, libnames, etc.) for common locations ($CONFDATA, $TABLES, $CODE)
 - Compute all numbers in package
   - No manual calculation of numbers
 
+## Streamlining | No manual interaction
 
-## We already started a `main.do`
+**DO NOT DO THIS**
+
+- "The figure will display in a window, save it to the paper directory"
+- "The logfile will show the regression coeffs, copy them into the Excel sheet"
+
+**DO DO THIS**
+
+- Dynamic documents$^*$
+- Write out/save tables and figures using packages
+- Use functionality to write directly into Excel sheets
+
+
+
+
+## Streanlining | Packages
+
+- No manual install of packages
+  - Use a script to create all directories, install all necessary packages/requirements/etc.
+  - Use tools like `renv` (R), `requirements.txt` (Python), `project.toml` (Julia)
+  - Write all Stata packages into a project-specific directory and do not re-install
+
+## Streamlining | Stata
 
 ```{stata, eval=FALSE}
 // Header of main.do
-global step1 1
+
+global rootdir : pwd
+global adodir  "${rootdir}/ado"
+cap mkdir "$adodir"
+adopath ++ "$adodir"
+adopath - PLUS     // Just to be sure
+adopath - PERSONAL // Just to be sure
+cap ssc install estout // this will now go into the new adodir we created!
+```
+
+## Streamlining | Scripts
+
+- Controller  script (`main.do`, `run.sh`, `makefile`) preferred
+  - Least amount of manual effort
+- Clear instructions
+
+
+
+## Streamlining | Automation
+
+### Repeatedly running through the entire sequence ensures later robustness
+
+- Presumes a single control file (`main.do`, `run.sh`)
+- Presumes ability to version results!
+- Leverage (data provider-specific) tools, such as job queues
+- Use free resources
+  - Job queues with low priority
+  - Human downtimes (leaving for a holiday, going to a conference)
+
+
+## Streamlining | Automation
+
+### Introduce break points
+
+- Do not reprocess when no changes to data or code happen
+- Always reprocess if data or code change 
+- Decision might be 
+  - Manual (flags)
+  - Automated (`make`, checksums, etc.)
+  
+## Streamlining | Automation
+
+### Introduce break points: manual
+
+```{stata, eval=FALSE}
+// Header of main.do
+global step1 0
+global step2 1
+global step3 1
+
+if $step1 == 1  do "$code/01_extract.do"
+if $step2 == 1  do "$code/02_analysis.do"
+if $step3 == 1  do "$code/03_figures.do"
+
+```
+
+
+## Streamlining | Automation
+
+### Introduce break points: automated
+
+
+```{stata, eval=FALSE}
+// Header of main.do
+global step1 0
 global step2 1
 
 // verify if file has changed
 global checksum1 386698503
 qui checksum "$resultfile1"
-if `r(checksum)' == $checksum1 global step1 0 
+if `r(checksum)' == $checksum1 global step2 0 
 
-if $step1 == 1  do "$code/01_dataclean.do"
-if $step2 == 1  do "$code/02_merge_stuff.do"
+if $step1 == 1  do "$code/01_extract.do"
+if $step2 == 1  do "$code/02_analysis.do"
 if $step3 == 1  do "$code/03_figures.do"
 ```
 
-# Step further: Use configuration files 
+(or use `make`, [`snakemake`](https://snakemake.readthedocs.io/en/stable/), [`cmake`](https://cmake.org/), ...)
 
-## Stata configuration files {.smaller}
+(Frequency in AEA journals: 1-2 per year...)
+
+
+## Streamlining | Modularity
+
+
+###  Use configuration files {.smaller}
 
 As file structure becomes more complex, configure short-cuts (globals, variables, etc.)
 
 ```{stata, eval=FALSE}
 // config.do
-global outputdata "/proyecto/datos/limpiados" // this is where you would write the data you create in this project
-global results    "/proyecto/articulo"        // All tables for inclusion in your paper go here
-global programs   "/proyecto/codigo"          // All programs (which you might "include") are to be found here
+global outputdata "/projeto/dados/limpos"   // this is where you would write the data you create in this project
+global results    "/projeto/artigo"         // All tables for inclusion in your paper go here
+global programs   "/projeto/codigo"         // All programs (which you might "include") are to be found here
 ```
 
 ## Stata configuration files {.smaller}
@@ -326,31 +361,17 @@ Expanded to include non-project space directories:
 
 ```{stata, eval=FALSE}
 // config.do
-global taxdata    "/secretos/impuestos"  
-global salarydata "/secretos/salarios"  
+global taxdata    "/segredos/impostos"  
+global salarydata "/segredos/salarios"  
 
-global outputdata "/proyecto/datos/limpiados" // this is where you would write the data you create in this project
-global results    "/proyecto/articulo"        // All tables for inclusion in your paper go here
-global programs   "/proyecto/codigo"          // All programs (which you might "include") are to be found here
+global outputdata "/projeto/dados/limpos"    // this is where you would write the data you create in this project
+global results    "/projeto/artigo"          // All tables for inclusion in your paper go here
+global programs   "/projeto/codigo"          // All programs (which you might "include") are to be found here
 ```
 
 ## Stata configuration files {.smaller}
 
-Or something like this:
-
-```{stata, eval=FALSE}
-// config.do
-global taxdata    "/data/irs1040"  
-global salarydata "/data/lehd"  
-
-global outputdata "/project/data/outputs"     // this is where you would write the data you create in this project
-global results    "/project/article/tables"   // All tables for inclusion in your paper go here
-global programs   "/project/code"             // All programs (which you might "include") are to be found here
-```
-
-## Stata configuration files {.smaller}
-
-Let's expand it to contain another parameter:
+Let's expand it further
 
 ```{stata, eval=FALSE}
 // config.do
@@ -371,15 +392,15 @@ global checksum1 386698503
 
 include "config.do"
 
-global step1 1
+global step1 0
 global step2 1
 
 // verify if file has changed
 qui checksum "$resultfile1"
-if `r(checksum)' == $checksum1 global step1 0 
+if `r(checksum)' == $checksum1 global step2 0 
 
-if $step1 == 1  do "$code/01_dataclean.do"
-if $step2 == 1  do "$code/02_merge_stuff.do"
+if $step1 == 1  do "$code/01_extract.do"
+if $step2 == 1  do "$code/02_analysis.do"
 if $step3 == 1  do "$code/03_figures.do"
 ```
 
@@ -395,7 +416,7 @@ But let's extend it to confidential code.
 
 ## What is confidential code, you say? 
 
-- In the United States, some **variables on IRS databases** are considered super-top-secret. So you can't name that-variable-that-you-filled-out-on-your-Form-1040 in your analysis code of same data. (They are often referred to in jargon as "Title 26 variables"). 
+- In the United States, some **variables on IRS databases** are considered super-top-secret. So you can't name that-variable-that-you-filled-out-on-your-annual-tax-Form-1040 in your analysis code of same data. (They are often referred to in jargon as "Title 26 variables"). 
 - Your code contains the **random seed you used to anonymize** the sensitive identifiers. This might allow to reverse-engineer the anonymization, and is not a good idea to publish.
 - You used a **look-up table hard-coded** in your Stata code to anonymize the sensitive identifiers (`replace anoncounty=1 if county="Tompkins, NY"`). A really bad idea, but yes, you probably want to hide that.
 - Your IT specialist or  disclosure officer thinks publishing the **exact path** to your copy of the confidential 2010 Census data, e.g., "/data/census/2010", is a security risk and refuses to let that code through.
@@ -420,7 +441,7 @@ graph twoway n logprofit
 
 ## Do not do this
 
-A bad example, because literally making more work for you and for future replicators, is to manually redact the confidential information with text that is not legitimate code:
+A bad example, because literally making more work for you and for future replicators, is to **manually redact** the confidential information with text that is not legitimate code:
 
 ```{stata, eval=FALSE}
 set seed NNNNN
@@ -452,27 +473,6 @@ by county: collapse (count)  n=$confemploy (mean) logprofit
 drop if n<$confmincell
 graph twoway n logprofit
 ```
-## Better {.smaller}
-
-and this would be the released file, part of the replication package:
-
-```{stata, eval=FALSE}
-//============ confidential parameters =============
-global confseed    XXXX    // a number
-global confpath    "XXXX"  // a path that will be communicated to you
-global confprofit  XXX     // Variable name for profit T26
-global confemploy  XXX     // Variable name for employment T26
-global confmincell XXX     // a number
-//============ end confidential parameters =========
-set seed $confseed
-use $confprofit county using "${confpath}/extract.dta", clear
-gen logprofit = log($confprofit)
-by county: collapse (count)  n=$confemploy (mean) logprofit
-drop if n<$confmincell
-graph twoway n logprofit
-```
-
-While the code won't run as-is, it is easy to un-redact, regardless of how many times you reference the confidential values, e.g., `q2f`, anywhere in the code.
 
 ## Best
 
@@ -496,8 +496,7 @@ if _rc == 0 {
 //============ end confidential parameters =========
 
 //============ non-confidential parameters =========
-global safepath "releasable"
-cap mkdir "$safepath"
+include "config.do"
 
 //============ end parameters ======================
 ```
@@ -562,6 +561,7 @@ Thus, the replication package would have:
 ```
 main.do
 README.md
+config.do
 include/confparms_template.do
 releasable/figure1.dta
 releasable/figure1.pdf
@@ -570,143 +570,340 @@ releasable/figure1.pdf
 
 
 
-
-
-
-# Part 4 | Wrapping up the replication package
+# Part 3 | Wrapping up the replication package
 
 ## Wrapping up the replication package
 
-- Using templates for reproducibility
-- Documenting what you did
-- When to document 
-
-## Best replication package
-
-We already had this:
-
-```
-main.do
-README.md
-include/confparms_template.do
-releasable/figure1.dta
-releasable/figure1.pdf
-```
-
-## What's in the README?
-
-
-Start with our [fabulous template README](https://social-science-data-editors.github.io/template_README/). Really, it helps! Available at [https://social-science-data-editors.github.io/template_README/](https://social-science-data-editors.github.io/template_README/)
+- Using templates for reproducibility: [fabulous template README](https://social-science-data-editors.github.io/template_README/)
+- Documenting what you did: *fill out the README*
+- When to document: *constantly*
 
 
 [![README](images/img-2021-11-08-2.png)](https://social-science-data-editors.github.io/template_README/)
 
+# Intermezzo | Key takeaways
 
-## Three parts to README
-
-- Data availability (and citations)
-- Computer requirements
-- Description of processing
-
-## Start with the last part
-
-That's easy: you've been keeping clean instructions since the start, right?
-
-- Run "`main.do`"
-- Describe what parts might be skipped
-- Describe what the various parts do
-- Describe which parts use confidential data
-
-You've been doing that since day 1!
-
-## Computer requirements
-
-In most confidential environments, such as FSRDC/ IRE, this part is out of your control. But describe it anyway!
-
-- Approximate description of computers/nodes used
-  - memory size (but interested in actual usage, not max of what the system has!)
-  - compute time! How long does a clean run, from top to bottom, take?
-  - number of nodes: any parallel processing?
-- Software
-  - Version of software (Stata 17, update level)
-  - All packages! Ideally, version of package (`which estout`)
-
-Some of that is captured in your notes (updated, remember?), some of that may change over the life of the project, and may be captured in your logs, or your `qsub` files.
-
-## Data availability
-
-- This is easy: it's the data you requested to have included in your FSRDC project!
-- So you had this info from Day -90 of the project!
-
-## Data availability redux
-
-In order to describe data availability, split into two: 
-
-- how did YOU get access to the data (that's old) 
-- how can OTHERS get access to the same data (that might be different!)
-- The two are not always the same, but are both relevant. 
-
-## Examples {.smaller}
-
-Examples include 
-
-- [this excellent description](https://social-science-data-editors.github.io/guidance/DCAS_Restricted_data.html#us-census-bureau-and-fsrdc) from a paper by [Teresa Fort](https://faculty.tuck.dartmouth.edu/teresa-fort/) ([ReStud](https://doi.org/10.1093/restud/rdw057)):
+- Automation 
+- Modularity
+- Not here: take into account what you CANNOT produce (sensitive statistics)
 
 
-> 1. All the results in the paper use confidential microdata from the U.S. Census Bureau. To gain
-access to the Census microdata, follow the directions here on how to write a proposal for access
-to the data via a Federal Statistical Research Data Center:
-https://www.census.gov/ces/rdcresearch/howtoapply.html.
-> 2. You must request the following datasets in your proposal:
->   - Longitudinal Business Database (LBD), 2002 and 2007
->   - Foreign Trade Database – Import (IMP), 2002 and 2007
->   - Annual Survey of Manufactures (ASM), including the Computer Network Use      Supplement (CNUS), 1999
->   - [...]
->   - Annual Survey of Magical Inputs (ASMI), 2002 and 2007
-> 3. Reference “Technology and Production Fragmentation: Domestic versus Foreign   Sourcing” by Teresa Fort, project number br1179 in the proposal. This will give you access to   the programs and input datasets required to reproduce the results. Requesting a search of archives   with the articles DOI ("10.1093/restud/rdw057") should yield the same results. 
->
->   NOTE: Project-related files are available for 10 years as of 2015. 
 
 
-## Examples {.smaller}
-
-Examples include 
-
-- [this description](https://social-science-data-editors.github.io/guidance/Requested_information_dcas.html#example-for-confidential-data) by Fadlon and Nielsen about Danish data
-
-> The information used in the analysis combines several Danish administrative registers (as described in the paper). The data use is subject to the European Union’s General Data Protection Regulation(GDPR) per new Danish regulations from May 2018. The data are physically stored on computers at Statistics Denmark and, due to security considerations, the data may not be transferred to computers outside Statistics Denmark. Researchers interested in obtaining access to the register data employed in this paper are required to submit a written application to gain approval from Statistics Denmark. The application must include a detailed description of the proposed project, its purpose, and its social contribution, as well as a description of the required datasets, variables, and analysis population. Applications can be submitted by researchers who are affiliated with Danish institutions accepted by Statistics Denmark, or by researchers outside of Denmark who collaborate with researchers affiliated with these institutions.
-
-(Example taken from [Fadlon and Nielsen, AEJ:Applied 2021](https://doi.org/10.1257/app.20170604)).
 
 
-## Three parts to README: timing
 
-| | |
-|---------|----------|
-|- Data availability (and citations):|**Start of project, edit at the end**|
-|- Computer requirements: | Middle of project|
-|- Description of processing: | Middle of project|
-| | |
+# Big data
 
-with the end really just a last read/edit.
+## Let me return to this piece of code
 
-# Wrapping it all up
+```{stata, eval=FALSE}
+// Header of main.do
 
-## Wrapping up
+include "config.do"
 
-- Public replication package contains intelligible code, omits confidential details (but provides template code), has detailed data provenance statements
-- Confidential replication package contains all the same, plus the confidential code, is archived in the FSRDC
+global step1 0
+global step2 1
 
-Now you wait for the replicators to show up!
+// verify if file has changed
+qui checksum "$resultfile1"
+if `r(checksum)' == $checksum1 global step2 0 
 
-# Addenda
+if $step1 == 1  do "$code/01_extract.do"
+if $step2 == 1  do "$code/02_analysis.do"
+if $step3 == 1  do "$code/03_figures.do"
+```
 
-## Things to remember
+## Let's add a parameter here
 
-- When doing a disclosure review request, remember to request the **code**
-- When outputting statistics, *consider the disclosure rules* - the less changes, the faster the output (in theory), but in particular fewer surprises
-- Do not think "*nobody will ever read this code*" - somebody is very likely to!
+```{stata, eval=FALSE}
+// Header of main.do
+
+include "config.do"
+    //               global extractpct 1
+
+global step1 0
+global step2 1
+
+// verify if file has changed
+qui checksum "$resultfile1"
+if `r(checksum)' == $checksum1 global step2 0 
+
+if $step1 == 1  do "$code/01_extract.do" $extractpct
+if $step2 == 1  do "$code/02_analysis.do"
+if $step3 == 1  do "$code/03_figures.do"
+```
+
+## And some context
+
+```{stata, eval=FALSE}
+// Header of main.do
+
+include "config.do"
+    //               global extractpct 1
+
+global step1 0
+global step2 1
+
+// verify if file has changed
+qui checksum "$resultfile1"
+if `r(checksum)' == $checksum1 global step2 0 
+
+if $step1 == 1  do "$code/01_extract.do" $extractpct  // extract from BIGDATA
+if $step2 == 1  do "$code/02_analysis.do"
+if $step3 == 1  do "$code/03_figures.do"
+```
+
+## This works for BIG DATA
+
+As we test our code, we use only a small fraction:
+```{stata, eval=FALSE}
+    //               global extractpct 1
+```
+
+We save the extract in `$resultfile1`, on which we can compute a checksum
+
+```{stata, eval=FALSE}
+qui checksum "$resultfile1"
+```
+
+and if that hasn't  changed, we don't do the merge stuff again:
+```{stata, eval=FALSE}
+if `r(checksum)' == $checksum1 global step2 0 
+if $step2 == 1  do "$code/02_analysis.do"
+```
+
+## We now have an EFFICIENT code for BIG DATA
+
+- While we are testing, only small chunk
+- Once we are done testing, we change one parameter (maybe two), and **reprocess** the whole thing again! Without much human work!
+
+## But it will still take a long time!
+
+True.
+
+## Adjusting for Parallelization
+
+(assume a job scheduler of some sort, with a counter)
+
+```{stata, eval=FALSE}
+// Header of main.do
+
+include "config.do"
+    //               global extractpct 1
+global step1 0
+global step2 1
+
+// verify if file has changed
+qui checksum "$resultfile1"
+if `r(checksum)' == $checksum1 global step2 0 
+
+if $step1 == 1  do "$code/01_extract.do" $extractpct  // extract from BIGDATA
+if $step2 == 1  do "$code/02_analysis.do"
+if $step3 == 1  do "$code/03_figures.do"
+```
+
+## Adjusting for Parallelization
+
+(let's change the location of the file check)
+
+```{stata, eval=FALSE}
+// Header of main.do
+
+include "config.do"
+    //               global extractpct 1
+global step1 0
+global step2 1
+
+if $step1 == 1  do "$code/01_extract.do" $extractpct  // extract from BIGDATA
+
+// verify if file has changed
+qui checksum "$resultfile1"
+if `r(checksum)' == $checksum1 global step2 0 
+
+if $step2 == 1  do "$code/02_analysis.do"
+```
+
+## Adjusting for Parallelization
+
+(Let's allow for an additional parameter to be passed)
+
+```{stata, eval=FALSE}
+// Header of main.do
+global parm `1'      // <--- this grabs any parameter we pass on launch
+
+include "config.do"
+    //               global extractpct 1
+global step1 0
+global step2 1
+
+if $extractpct != $parm {        // <-- If we pass a non-std value
+      global step1 1             // <-- we force step1 to be executed
+      global extractpct $parm    // <-- with the new parameter
+}
+if $step1 == 1  do "$code/01_extract.do" $extractpct  // extract from BIGDATA
+
+// verify if file has changed
+qui checksum "$resultfile1"
+if `r(checksum)' == $checksum1 global step2 0 
+                                 // <-- and this will then fail, kicking in step2
+if $step2 == 1  do "$code/02_analysis.do"
+```
+
+## Adjusting for Parallelization
+
+This can be launched in a loop:
+
+```{bash, eval=FALSE}
+for ITER in $(seq 1 100)
+do
+  stata do main.do $ITER &
+done
+```
+
+which will launch 100 jobs simultaneously!
+
+BETTER: Use a tool like `qsub`, `slurm` or similar that can also use a loop, and ship off jobs to multiple compute nodes (check your local HPC cluster)
+
+## Adjusting for Parallelization
+
+We will still need program accordingly:
+
+- `$code/02_analysis.do` needs to save the output accordingly (not overwrite)
+- logfiles need to be collected, should something go wrong
+- A downstream program will need to collect the results again.
+- Talk to your sysadmin first before you overwhelm a system!
+
+
+
+
+
+
+
+
+
+
+# Why should I believe you?
+
+## Why should I believe you?
+
+*What happens when I (or anybody else) cannot access the data you used?*
+
+- The data is available from private provider to you only
+- You have to be physically present in a particular location
+- The data have been deleted (e.g. legal requirements)
+- The data have been modified since you used them (e.g, GDPR, Twitter)
+- The data are too big to move to a different location (big data in cloud)
+
+## The problem of trust 
+
+- In "classical" replication package: 
+
+`I don't trust you, therefore give me data, code, I will run myself.`
+
+- Provides some evidence that complete package, same results
+- Inefficient
+- Here?
+
+## The problem of trust
+
+I (Lars Vilhuber) know that I can trust [cascad.tech](https://cascad.tech) when they run replication packages for me because
+
+- We have discussed in detail about the process (`inspection`)
+- I have interacted with them multiple times (`verification`)
+
+
+```{r, out.width = "50%", out.height = "30%", fig.cap= "cascad website", echo=FALSE}
+
+knitr::include_graphics("images/cascad.png")
+```
+
+
+## The problem of trust
+
+But nobody can solve the problem in all scenarios, especially when data are `one-time`.
+
+We have to `verify` live, once, and convey that.
+
+## The TRACE project
+
+["TRAnsparency CErtified (TRACE): Trusting Computational Research Without Repeating It"](https://nsf.gov/awardsearch/showAward?AWD_ID=2209629&HistoricalAwards=false)
+
+
+
+```{r, out.width = "50%", out.height = "30%", fig.cap= "nsf search result", echo=FALSE}
+
+knitr::include_graphics("images/nsf-trace.png")
+```
+
+## The TRACE project: basic idea
+
+- No researcher interaction during running
+- A standardized, transparent way of describing HOW things are run
+- Ability to verify integrity of replication package as created the first time
+- A few other things (that still need to be defined)
+
+## The TRACE project: close but not quite
+
+- recorded runs from services like [Wholetale](https://wholetale.org) and [Codeocean](https://www.codeocean.com) -- need a bit of description, might need "isolated" (airgapped) runs, cannot handle confidential data
+- Institutions like **BPLIM** and **IAB FDZ** where reproducibility is baked in -- code is run by systems or non-author staff -- need more transparency into the process, need a way to lock in the output packages, can't package up the input data
+
+In both cases, individual inspection and conversations can lead to trust, similar to `cascad`, but not scalable, and "leaky".
+
+## The TRACE project: a picture
+
+
+```{r, out.width = "80%", out.height = "30%", fig.cap= "TRACE overview", echo=FALSE}
+
+knitr::include_graphics("images/TRACE-System-Elements.png")
+```
+
+## The TRACE project : System description
+
+- a *way of describing a system* - **any** system,  from 
+  - launching code, 
+  - to accessing data, 
+  - to collecting output, 
+  - including any non-researcher inputs (editing/ confidentiality)
+  
+**Key**
+
+- the researcher cannot manipulate the system. 
+- the output, if not all the inputs, needs to be bundled up in a credible way.
+- comparable across systems: Wholetale, Codeocean, cascad, university or central bank HPC cluster, FSRDC, IAB, etc. 
+- must be able to handle confidential inputs and intermediate outputs, flow data, BIG DATA
+
+## The TRACE project : Object description
+
+Then, once you've described a system, you need to certify a "run" of the system. 
+
+That's the next piece: `Transparency-Certified Research Objects (TROs)`
+
+## The TRACE project : Current state
+
+- Sketch of key description
+- Sample implementation (simplest software and case)
+
+Goals:
+
+- Specifications that anybody can implement (it is NOT a software implementation)
+- But also: sample software implementations (for SLURM job scheduler, for instance, but also Wholetale recorded runs)
+
+
+# The TRACE project : input appreciated
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Thanks
 
-Find this presentation at [larsvilhuber.github.io/reproducibility-confidential-fsrdc](https://larsvilhuber.github.io/reproducibility-confidential-fsrdc)
+Find this presentation at [larsvilhuber.github.io/reproducibility-confidential-bigdata-bplim](https://larsvilhuber.github.io/reproducibility-confidential-bigdata-bplim)
